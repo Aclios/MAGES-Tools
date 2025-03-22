@@ -27,30 +27,61 @@ Msb files contain the text of the game.
 Batch export msb files to xlsx:
 
 ```
-py msb.py -e <version> <"msb_dir_path"> <"xlsx_dir_path">
+py msb.py -e <game code> <"msb_dir_path"> <"xlsx_dir_path">
 ```
+Since op codes, characters, buttons are mapped differently depending on the game, only supported games can have their text exported and reimported. Here are the supported games so far (the font mapping may be off sometimes):
+
+| Game   | Code |
+|---      |---    |
+|Famicom Detective Club: The Missing Heir|FDC1
+|Famicom Detective Club: The Girl Who Stands Behind|FDC2
+|Famicom Detective Club: Emio - The Smiling Man|FDC3
+|Never 7: The End of Infinity|Never7
+|Ever 17: The Out of Infinity|Ever17
+
+The nametags will also be exported in a speakers.xlsx file. By translating it you will be able to batch translate the nametags in all the Excel files.
 
 Batch import text to msb files:
 
 ```
-py msb.py -e <version> <"msb_dir_path"> <"xlsx_dir_path">
+py msb.py -i <game code> <"msb_dir_path"> <"xlsx_dir_path">
 ```
+The font.txt file in profiles/game_code is used to convert characters to the custom encoding used by MAGES. If you added new characters to the font by replacing another character, you need to modify the font.txt accordingly (for example, if you replaced the A by a œ in the font image, you need to replace the A of the font.txt file by a œ).
 
-Version is either 1 or 2:
-
-- 1 means the characters are encoded in 2 bytes. Presumably, it's used for games that don't have all three of Japanese, Chinese and Korean languages.
-
-- 2 means the characters are encoded in 4 bytes. Presumably, it's used for games that have at least Japanese, Korean, Chinese languages.
-
-The font.txt file is used to convert characters to the custom encoding used by MAGES. If you added new characters to the font by replacing another character, you need to modify the font.txt accordingly (for example, if you replaced the A by a œ in the font image, you need to replace the A of the font.txt file by a œ).
-
-Even if the file contains another language, in msb files the name of the person talking is always in Japanese. While exporting msb files, a speakers.txt file will be created. If you want to translate easily the name of the speakers in your xlsx file, modify this speaker file by replacing the names at the right of the "=" characters by your translation, and run:
+Batch translate the nametags in all Excel files, using the speakers.xlsx file:
 
 ```
-py msb.py -speakers <"xlsx_dir_path"> <"speakers.txt_file_path">
+py msb.py -s <"xlsx_dir_path"> <"speakers_file_path">
 ```
 
-Note that the only thing imported to the msb files will be the text in the Translation column, the rest is only here for context.
+## SCX files
+
+Instead of using msb files, so games store the text directly in script files (.scx)
+
+Batch export scx files to xlsx:
+
+```
+py scx.py -e <game code> <"scx_dir_path"> <"xlsx_dir_path">
+```
+Since op codes, characters, buttons are mapped differently depending on the game, only supported games can have their text exported and reimported. Here are the supported games so far (the font mapping may be off sometimes):
+
+| Game   | Code |
+|---      |---    |
+|CHAOS;CHILD|CHAOS
+
+The nametags will also be exported in a speakers.xlsx file. By translating it you will be able to batch translate the nametags in all the Excel files.
+
+Batch import text to scx files:
+
+```
+py scx.py -i <game code> <"scx_dir_path"> <"xlsx_dir_path">
+```
+
+Batch translate the nametags in all Excel files, using the speakers.xlsx file:
+
+```
+py scx.py -s <"xlsx_dir_path"> <"speakers_file_path">
+```
 
 ## SFP files
 
