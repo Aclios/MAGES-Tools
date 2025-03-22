@@ -2,7 +2,7 @@ from utils import EndianBinaryFileReader, EndianBinaryFileWriter
 import os
 import sys
 from pathlib import Path
-from msb import MSB, MSBEntry, write_speakers, convert_speakers
+from msb import MSB, MSBEntry, write_speakers, convert_speakers, load_speakers
 
 class SCX(MSB): #inherit MSB methods
     def __init__(self, filepath : str, game_code : str):
