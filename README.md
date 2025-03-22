@@ -68,6 +68,8 @@ Since op codes, characters, buttons are mapped differently depending on the game
 | Game   | Code |
 |---      |---    |
 |CHAOS;CHILD|CHAOS
+|STEIN;GATE|GATE
+|STEIN;GATE 0|GATE0
 
 The nametags will also be exported in a speakers.xlsx file. By translating it you will be able to batch translate the nametags in all the Excel files.
 
