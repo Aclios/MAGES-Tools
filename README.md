@@ -29,6 +29,7 @@ Batch export msb files to xlsx:
 ```
 py msb.py -e <game code> <"msb_dir_path"> <"xlsx_dir_path">
 ```
+
 Since op codes, characters, buttons are mapped differently depending on the game, only supported games can have their text exported and reimported. Here are the supported games so far (the font mapping may be off sometimes):
 
 | Game   | Code |
@@ -39,14 +40,15 @@ Since op codes, characters, buttons are mapped differently depending on the game
 |Never 7: The End of Infinity|Never7
 |Ever 17: The Out of Infinity|Ever17
 
-The nametags will also be exported in a speakers.xlsx file. By translating it you will be able to batch translate the nametags in all the Excel files.
+The font.txt file in profiles/game_code is used to convert characters to the custom encoding used by MAGES. If you added new characters to the font by replacing another character, you need to modify the font.txt accordingly (for example, if you replaced the A by a œ in the font image, you need to replace the A of the font.txt file by a œ).
 
 Batch import text to msb files:
 
 ```
 py msb.py -i <game code> <"msb_dir_path"> <"xlsx_dir_path">
 ```
-The font.txt file in profiles/game_code is used to convert characters to the custom encoding used by MAGES. If you added new characters to the font by replacing another character, you need to modify the font.txt accordingly (for example, if you replaced the A by a œ in the font image, you need to replace the A of the font.txt file by a œ).
+
+During export, the nametags will also be written in a speakers.xlsx file. By translating it you will be able to batch translate the nametags in all the Excel files.
 
 Batch translate the nametags in all Excel files, using the speakers.xlsx file:
 
@@ -56,22 +58,21 @@ py msb.py -s <"xlsx_dir_path"> <"speakers_file_path">
 
 ## SCX files
 
-Instead of using msb files, so games store the text directly in script files (.scx)
+Instead of using msb files, some games store the text directly in script files (.scx)
+It has the same functionalities as MSB files.
 
 Batch export scx files to xlsx:
 
 ```
 py scx.py -e <game code> <"scx_dir_path"> <"xlsx_dir_path">
 ```
-Since op codes, characters, buttons are mapped differently depending on the game, only supported games can have their text exported and reimported. Here are the supported games so far (the font mapping may be off sometimes):
+Supported games:
 
 | Game   | Code |
 |---      |---    |
 |CHAOS;CHILD|CHAOS
 |STEIN;GATE|GATE
 |STEIN;GATE 0|GATE0
-
-The nametags will also be exported in a speakers.xlsx file. By translating it you will be able to batch translate the nametags in all the Excel files.
 
 Batch import text to scx files:
 

@@ -15,6 +15,8 @@ class MSB:
             self.entry_count = f.read_UInt32()
             self.data_start_offset = f.read_UInt32()
             self.entries = [MSBEntry(f, self.data_start_offset, self.settings, self.font, self.op_codes, self.buttons) for _ in range(self.entry_count)]
+            self.unk_ids = set()
+            for entry in self.entries: self.unk_ids |= entry.unknown_ids
 
     def write_excel(self, out_dir : str):
         out_path = Path(out_dir) / (self.filename + '.xlsx')
@@ -83,6 +85,7 @@ class MSBEntry:
         self.string = ""
         self.speaker = ""
         self.static_code = ""
+        self.unknown_ids = set()
 
         if self.data_offset != 0xFF_FF_FF_FF:
             f.set_endianness('big')
@@ -135,7 +138,10 @@ class MSBEntry:
                     out_string += f"<{self.buttons[idx]}>"
                 else:
                     assert idx < len(self.font), f"Char number {idx} is beyond font table length"
-                    out_string += self.font[idx]
+                    char = self.font[idx]
+                    out_string += char
+                    if char == ' ' and idx != 63:
+                        self.unknown_ids.add(idx)
 
             elif val == 0:
                 out_string += '\n'
@@ -253,6 +259,7 @@ def convert_speakers(xlsx_dir : str, speakers_path : str):
 
 def batch_export(game_code : str, input_dir : str, extraction_dir : str):
     speakers = set()
+    unk_ids = set()
     os.makedirs(extraction_dir, exist_ok=True)
 
     for file in os.listdir(input_dir):
@@ -261,9 +268,12 @@ def batch_export(game_code : str, input_dir : str, extraction_dir : str):
             msb = MSB(Path(input_dir) / file, game_code)
             speakers |= msb.get_speakers()           
             msb.write_excel(extraction_dir)
+            unk_ids |= msb.unk_ids
 
     print("Writing speakers file...")
     write_speakers(Path(extraction_dir) / "speakers.xlsx", list(speakers))
+  #  with open('unk.txt', mode='w') as f:
+   #     for id in unk_ids: f.write(str(id) + '\n')
     print("Done!")
 
 def batch_import(game_code : str, input_dir : str, extraction_dir : str):
