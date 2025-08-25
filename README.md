@@ -59,7 +59,8 @@ py msb.py -s <"xlsx_dir_path"> <"speakers_file_path">
 ## SCX files
 
 Instead of using msb files, some games store the text directly in script files (.scx)
-It has the same functionalities as MSB files.
+
+Everyone works the same than for MSB files.
 
 Batch export scx files to xlsx:
 
@@ -112,4 +113,20 @@ Export the glyphs from a mft file:
 
 ```
 py mft.py -e <"mft_file_path"> <"glyphs_png_path">
+```
+
+## Infinity games font
+
+Allows to export/import glyphs mapping using a json file, and update the font.txt file accordingly, for the Infinity games (Ever17 and Never7)
+
+Export glyphs mapping to json (see above for game codes):
+
+```
+py infinityFont.py -e <game code> <"font.bin_file_path"> <"json_path">
+```
+
+Import glyphs mapping to a new font.bin file and update font.txt:
+
+```
+py infinityFont.py -i <game code> <"json_path"> <"new_font.bin_file_path">
 ```

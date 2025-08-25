@@ -63,6 +63,13 @@ class EndianBinaryReader:
         if byte == b'':
             raise EOFError()
         return data
+    
+    def get_filesize(self) -> int:
+        pos = self.tell()
+        self.seek(0, 2)
+        filesize = self.tell()
+        self.seek(pos)
+        return filesize
 
 class EndianBinaryFileReader(EndianBinaryReader):
     def __init__(self, filepath : str, endianness : str = 'little'):
