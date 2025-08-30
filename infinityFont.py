@@ -45,7 +45,7 @@ class InfinityFont:
             for i in range(len(chars) // 64):
                 f.write(chars[i * 64 : (i + 1) * 64] + '\n')
             if len(chars) % 64 != 0:
-                f.write(chars[(i + 1) * 64])
+                f.write(chars[(i + 1) * 64:])
 
     def write(self, out_path : str):
         with EndianBinaryFileWriter(out_path) as f:
