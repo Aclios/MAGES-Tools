@@ -117,7 +117,7 @@ py mft.py -e <"mft_file_path"> <"glyphs_png_path">
 
 ## Infinity games font
 
-Allows to export/import glyphs mapping using a json file, and update the font.txt file accordingly, for the Infinity games (Ever17 and Never7)
+Export/import glyphs mapping using a json file, and update the font.txt file accordingly, for the Infinity games (Ever17 and Never7)
 
 Export glyphs mapping to json (see above for game codes):
 
@@ -129,4 +129,22 @@ Import glyphs mapping to a new font.bin file and update font.txt:
 
 ```
 py infinityFont.py -i <game code> <"json_path"> <"new_font.bin_file_path">
+```
+
+## Famicom Detective 1 Font
+
+Export/import glyphs mapping using a json file, and update the font.txt file accordingly, for Famicom Detective 1 (english version)
+
+Since it's bundled in the 'main' compiled (and compressed) code, you need to uncompress and convert it to a .elf file, using nx2elf, and then compress it back, using elf2nso.
+
+Export glyphs mapping to json:
+
+```
+py FDC1_Font.py -e FDC1 <"main_elf_file_path"> <"json_path">
+```
+
+Import glyphs mapping to the main.elf file and update font.txt:
+
+```
+py FDC1_Font.py -i FDC1 <"json_path"> <"main_elf_file_path">
 ```

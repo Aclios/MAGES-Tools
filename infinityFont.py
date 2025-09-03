@@ -1,4 +1,4 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter
+from utils import EndianBinaryFileReader, EndianBinaryFileWriter, load_font_txt, write_font_txt
 from PIL import Image
 from pathlib import Path
 import json
@@ -7,7 +7,7 @@ import sys
 class InfinityFont:
     def __init__(self, filepath : str, game_code : str):
         self.game_code = game_code
-        self.font = open(Path('profiles', game_code, 'font.txt'), mode = 'r', encoding = 'utf-8-sig').read().replace('\n','').replace('\r','')
+        self.font = load_font_txt(game_code)
         if str(filepath).endswith('.json'):
             self.import_json(filepath)
         else:
@@ -41,11 +41,7 @@ class InfinityFont:
     def export_font_txt(self):
         chars = ''
         for glyph in self.glyphs : chars += glyph.char
-        with open(Path('profiles', self.game_code, 'font.txt'), mode = 'w', encoding = 'utf-8-sig') as f:
-            for i in range(len(chars) // 64):
-                f.write(chars[i * 64 : (i + 1) * 64] + '\n')
-            if len(chars) % 64 != 0:
-                f.write(chars[(i + 1) * 64:])
+        write_font_txt(self.game_code, chars)
 
     def write(self, out_path : str):
         with EndianBinaryFileWriter(out_path) as f:

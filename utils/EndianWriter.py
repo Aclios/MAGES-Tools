@@ -74,3 +74,18 @@ class EndianBinaryStreamWriter(EndianBinaryWriter):
         self.tell = self.stream.tell
         self.seek = self.stream.seek
         self.getvalue = self.stream.getvalue
+
+class EndianBinaryFileUpdater(EndianBinaryWriter):
+    def __init__(self, filepath : str, endianness : str = 'little'):
+        self.set_endianness(endianness)
+        self.filepath = filepath
+        self.file = open(self.filepath,mode='rb+')
+        self.write = self.file.write
+        self.tell = self.file.tell
+        self.seek = self.file.seek
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.file.close()

@@ -1,4 +1,4 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter, EndianBinaryStreamWriter, TextStreamReader
+from utils import EndianBinaryFileReader, EndianBinaryFileWriter, EndianBinaryStreamWriter, TextStreamReader, load_font_txt
 import os
 import sys
 import json
@@ -37,7 +37,7 @@ class MSB:
     def load_profile(self, game_code : str):
         profile_path = Path('profiles') / game_code
         assert profile_path.exists() , f"Error: No profile found for this game code: {game_code}"
-        self.font = open(profile_path / 'font.txt', mode = 'r', encoding = 'utf-8-sig').read().replace('\n','').replace('\r','')
+        self.font = load_font_txt(game_code)
         buttons = json.load(open(profile_path / 'buttons.json', mode = 'r', encoding = 'utf-8'))
         self.buttons = {int(k) : v for k, v in buttons.items()}
         op_codes = json.load(open(profile_path / 'op_codes.json', mode = 'r', encoding = 'utf-8'))
