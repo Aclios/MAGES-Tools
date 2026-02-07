@@ -43,13 +43,13 @@ class EndianBinaryReader:
         return struct.unpack(f'{self.endian_flag}Q',self.read(8))[0]
     
     def read_float32(self) -> float:
-        struct.unpack(f'{self.endian_flag}f',self.read(4))[0]
+        return struct.unpack(f'{self.endian_flag}f',self.read(4))[0]
     
     def read_bool(self):
         return self.read_UInt8() == 1
     
-    def check_magic(self, magic):
-        check = self.read(4)
+    def check_magic(self, magic: bytes):
+        check = self.read(len(magic))
         if check != magic:
             raise Exception(f"Error: Invalid magic. Expected {str(magic)}, read {str(check)}")
         return check

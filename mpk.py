@@ -1,14 +1,15 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter
-import os
+from utils import EndianBinaryFileReader, EndianBinaryFileWriter, has_correct_suffix
 from pathlib import Path
 import zlib
 import sys
+
+MAGIC = b'MPK\x00'
 
 class MPK:
     def __init__(self, filepath : str):
         with EndianBinaryFileReader(filepath) as f:
             self.filepath = filepath
-            self.magic = f.check_magic(b'MPK\x00')
+            f.check_magic(MAGIC)
             self.unk1 = f.read_UInt16()
             self.unk2 = f.read_UInt16()
             self.entry_count = f.read_UInt64()
@@ -16,12 +17,11 @@ class MPK:
             self.entries = [MPKEntry(f) for _ in range(self.entry_count)]
 
     def unpack(self, extract_dir : str):
-        os.makedirs(extract_dir, exist_ok = True)
         for entry in self.entries:
             if entry.filepath != '':
                 print(f"Extracting {entry.filepath} from {self.filepath}...")
                 extract_path = Path(extract_dir) / entry.filepath
-                os.makedirs(extract_path.parent, exist_ok=True)
+                extract_path.parent.mkdir(exist_ok=True, parents=True)
                 entry.write_file(extract_path)
 
     def import_files(self, dir : str):
@@ -29,12 +29,12 @@ class MPK:
             lookup_path = Path(dir) / entry.filepath
             if lookup_path.exists():
                 print(f"Importing {lookup_path} to {self.filepath}...")
-                newdata = open(lookup_path, 'rb').read()
+                newdata = lookup_path.read_bytes()
                 entry.import_data(newdata)
 
     def save(self, filepath : str):
         with EndianBinaryFileWriter(filepath) as f:
-            f.write(self.magic)
+            f.write(MAGIC)
             f.write_UInt16(self.unk1)
             f.write_UInt16(self.unk2)
             f.write_UInt64(self.entry_count)
@@ -85,7 +85,7 @@ class MPKEntry:
             case _:
                 raise Exception(f"Unsupported compression with id {self.compress_flag}")         
         assert len(out_data) == self.uncompressed_data_size, "Error: the actual length of the data don't match the expected size"
-        open(extract_path, 'wb').write(out_data)
+        Path(extract_path).write_bytes(out_data)
 
     def write_info(self, f : EndianBinaryFileWriter):
         f.write_UInt32(self.compress_flag)
@@ -97,19 +97,17 @@ class MPKEntry:
         f.write((0xE0 - len(self.filepath)) * b"\x00")
 
 def batch_export_mpk(input_dir : str, extracted_dir : str):
-    for file in os.listdir(input_dir):
-        if file.lower().endswith(".mpk"):
-            abs_path = Path(input_dir) / file
-            mpk = MPK(abs_path)
-            mpk.unpack(Path(extracted_dir) / file)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.mpk'):
+            mpk = MPK(path)
+            mpk.unpack(Path(extracted_dir, path.name))
 
 def batch_import_mpk(input_dir : str, extracted_dir : str):
-    for file in os.listdir(input_dir):
-        if file.lower().endswith(".mpk"):
-            abs_path = Path(input_dir) / file
-            mpk = MPK(abs_path)
-            mpk.import_files(Path(extracted_dir) / file)
-            mpk.save(abs_path)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.mpk'):
+            mpk = MPK(path)
+            mpk.import_files(Path(extracted_dir, path.name))
+            mpk.save(path)
 
 def main():
     args = sys.argv

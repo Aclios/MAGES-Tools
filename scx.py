@@ -1,15 +1,16 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter
-import os
+from utils import EndianBinaryFileReader, EndianBinaryFileWriter, has_correct_suffix
 import sys
 from pathlib import Path
-from msb import MSB, MSBEntry, write_speakers, convert_speakers, load_speakers
+from msb import MSB, MSBEntry, write_speakers, convert_speakers
+
+MAGIC = b'SC3\x00'
 
 class SCX(MSB): #inherit MSB methods
     def __init__(self, filepath : str, game_code : str):
         self.load_profile(game_code)
         with EndianBinaryFileReader(filepath) as f:
             self.filename = Path(filepath).name
-            self.magic = f.check_magic(b'SC3\x00')
+            f.check_magic(MAGIC)
             self.text_table_offset = f.read_UInt32()
             self.unk_table_offset = f.read_UInt32()
             self.text_entry_count = (self.unk_table_offset - self.text_table_offset) // 4
@@ -24,7 +25,7 @@ class SCX(MSB): #inherit MSB methods
 
     def save(self, out_filepath : str):
         with EndianBinaryFileWriter(out_filepath) as f:
-            f.write(self.magic)
+            f.write(MAGIC)
             f.write_UInt32(self.text_table_offset)
             f.write_UInt32(self.unk_table_offset)
             f.write(self.script_data)
@@ -63,12 +64,11 @@ class SCXTextEntry(MSBEntry): #inherit MSB methods related to data encoding
 
 def batch_export(game_code : str, input_dir : str, extraction_dir : str):
     speakers = set()
-    os.makedirs(extraction_dir, exist_ok=True)
-
-    for file in os.listdir(input_dir):
-        if file.lower().endswith('.scx'):
-            print(f"Exporting {Path(input_dir) / file}...")
-            scx = SCX(Path(input_dir) / file, game_code)
+    Path(extraction_dir).mkdir(exist_ok=True, parents=True)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.scx'):
+            print(f"Exporting {path}...")
+            scx = SCX(path, game_code)
             speakers |= scx.get_speakers()           
             scx.write_excel(extraction_dir)
 
@@ -77,12 +77,12 @@ def batch_export(game_code : str, input_dir : str, extraction_dir : str):
     print("Done!")
 
 def batch_import(game_code : str, input_dir : str, extraction_dir : str):
-    for file in os.listdir(input_dir):
-        if file.lower().endswith('.scx'):
-            scx = SCX(Path(input_dir) / file, game_code)
-            print(f"Importing text to {Path(input_dir) / file}...")
-            scx.load_excel(Path(extraction_dir) / (file + '.xlsx'))
-            scx.save(Path(input_dir) / file)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.scx'):
+            scx = SCX(path, game_code)
+            print(f"Importing text to {path}...")
+            scx.load_excel(Path(extraction_dir, path.name + '.xlsx'))
+            scx.save(path)
     print("Done!")
 
 def main():

@@ -8,7 +8,7 @@ class InfinityFont:
     def __init__(self, filepath : str, game_code : str):
         self.game_code = game_code
         self.font = load_font_txt(game_code)
-        if str(filepath).endswith('.json'):
+        if Path(filepath).suffix == '.json':
             self.import_json(filepath)
         else:
             with EndianBinaryFileReader(filepath) as f:

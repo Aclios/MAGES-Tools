@@ -1,16 +1,17 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter, EndianBinaryStreamWriter, TextStreamReader, load_font_txt
-import os
+from utils import EndianBinaryFileReader, EndianBinaryFileWriter, EndianBinaryStreamWriter, TextStreamReader, load_font_txt, has_correct_suffix
 import sys
 import json
 from pathlib import Path
 import pandas as pd
+
+MAGIC = b'MES\x00'
 
 class MSB:
     def __init__(self, filepath : str, game_code : str):
         self.load_profile(game_code)
         with EndianBinaryFileReader(filepath) as f:
             self.filename = Path(filepath).name
-            self.magic = f.check_magic(b'MES\x00')
+            f.check_magic(MAGIC)
             self.unk = f.read_UInt32()
             self.entry_count = f.read_UInt32()
             self.data_start_offset = f.read_UInt32()
@@ -36,7 +37,7 @@ class MSB:
 
     def load_profile(self, game_code : str):
         profile_path = Path('profiles') / game_code
-        assert profile_path.exists() , f"Error: No profile found for this game code: {game_code}"
+        assert profile_path.is_dir() , f"Error: No profile found for this game code: {game_code}"
         self.font = load_font_txt(game_code)
         buttons = json.load(open(profile_path / 'buttons.json', mode = 'r', encoding = 'utf-8'))
         self.buttons = {int(k) : v for k, v in buttons.items()}
@@ -46,7 +47,7 @@ class MSB:
 
     def save(self, out_filepath : str):
         with EndianBinaryFileWriter(out_filepath) as f:
-            f.write(self.magic)
+            f.write(MAGIC)
             f.write_UInt32(self.unk)
             f.write_UInt32(self.entry_count)
             f.write_UInt32(self.data_start_offset)
@@ -247,28 +248,27 @@ def load_speakers(filepath : str):
 def convert_speakers(xlsx_dir : str, speakers_path : str):
     print("Converting speakers...")
     speaker_trad_map = load_speakers(speakers_path)
-    for file in os.listdir(xlsx_dir):
-        if file.endswith('.xlsx'):
-            df = pd.read_excel(Path(xlsx_dir) / file, index_col = 0, dtype = str, na_filter = False)
+    for path in Path(xlsx_dir).iterdir():
+        if has_correct_suffix(path, '.xlsx'):
+            df = pd.read_excel(path, index_col = 0, dtype = str, na_filter = False)
             if "Speaker Original" in df.columns:
                 for idx, speaker in enumerate(df["Speaker Original"]):
                     if speaker in speaker_trad_map:
                         df["Speaker Translation"][idx] = speaker_trad_map[speaker]
-                df.to_excel(Path(xlsx_dir) / file)
+                df.to_excel(path)
     print("Done!")
 
 def batch_export(game_code : str, input_dir : str, extraction_dir : str):
     speakers = set()
-    unk_ids = set()
-    os.makedirs(extraction_dir, exist_ok=True)
-
-    for file in os.listdir(input_dir):
-        if file.lower().endswith('.msb'):
-            print(f"Exporting {Path(input_dir) / file}...")
-            msb = MSB(Path(input_dir) / file, game_code)
+    #unk_ids = set()
+    Path(extraction_dir).mkdir(exist_ok=True, parents=True)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.msb'):
+            print(f"Exporting {path}...")
+            msb = MSB(path, game_code)
             speakers |= msb.get_speakers()           
             msb.write_excel(extraction_dir)
-            unk_ids |= msb.unk_ids
+            #unk_ids |= msb.unk_ids
 
     print("Writing speakers file...")
     write_speakers(Path(extraction_dir) / "speakers.xlsx", list(speakers))
@@ -277,12 +277,12 @@ def batch_export(game_code : str, input_dir : str, extraction_dir : str):
     print("Done!")
 
 def batch_import(game_code : str, input_dir : str, extraction_dir : str):
-    for file in os.listdir(input_dir):
-        if file.lower().endswith('.msb'):
-            msb = MSB(Path(input_dir) / file, game_code)
-            print(f"Importing text to {Path(input_dir) / file}...")
-            msb.load_excel(Path(extraction_dir) / (file + '.xlsx'))
-            msb.save(Path(input_dir) / file)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.msb'):
+            msb = MSB(path, game_code)
+            print(f"Importing text to {path}...")
+            msb.load_excel(Path(extraction_dir, path.name + 'xlsx'))
+            msb.save(path)
     print("Done!")
 
 def main():

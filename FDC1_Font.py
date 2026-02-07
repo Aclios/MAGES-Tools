@@ -3,19 +3,20 @@ import json
 import sys
 
 FONT_DATA_OFFSET = 0x1B0E8D
+GLYPH_COUNT = 0x400
 
 def export_font_metrics(game_code : str, main_path : str, json_path : str):
     font = load_font_txt(game_code)
 
     with EndianBinaryFileReader(main_path) as f:
         f.seek(FONT_DATA_OFFSET)
-        width = [f.read_Int8() for _ in range(0x400)]
-        height = [f.read_Int8() for _ in range(0x400)]
-        unk2 = [f.read_Int8() for _ in range(0x400)]
-        x_off = [f.read_Int8() for _ in range(0x400)]
-        y_off = [f.read_Int8() for _ in range(0x400)]
+        width = [f.read_Int8() for _ in range(GLYPH_COUNT)]
+        height = [f.read_Int8() for _ in range(GLYPH_COUNT)]
+        unk2 = [f.read_Int8() for _ in range(GLYPH_COUNT)]
+        x_off = [f.read_Int8() for _ in range(GLYPH_COUNT)]
+        y_off = [f.read_Int8() for _ in range(GLYPH_COUNT)]
 
-    chars = [font[i] for i in range(0x400)]
+    chars = [font[i] for i in range(GLYPH_COUNT)]
 
     json_data = [
             {
@@ -25,7 +26,7 @@ def export_font_metrics(game_code : str, main_path : str, json_path : str):
             "unk2" : unk2[i],
             "x_off" : x_off[i],
             "y_off" : y_off[i]
-            } for i in range(0x400)]
+            } for i in range(GLYPH_COUNT)]
 
     json.dump(json_data, open(json_path, mode='x', encoding='utf-8'), ensure_ascii=False, indent=5)
 

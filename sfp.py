@@ -1,5 +1,4 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter
-import os
+from utils import EndianBinaryFileReader, EndianBinaryFileWriter, has_correct_suffix
 from pathlib import Path
 import sys
 
@@ -11,27 +10,28 @@ extensions = {
     "audio" : ".opus"
 }
 
+MAGIC = b'MGBDSPFT'
+
 class SFP:
     def __init__(self, filepath : str):
-        self.filename = os.path.basename(filepath).split('.')[0]
-        self.filepath = filepath
+        self.filepath = Path(filepath)
+        self.filename = self.filepath.name
         with EndianBinaryFileReader(filepath) as f:
-            self.magic1 = f.check_magic(b'MGBD')
-            self.magic2 = f.check_magic(b'SPFT')
+            f.check_magic(MAGIC)
             self.unk = f.read_UInt32()
             self.entry_count = f.read_UInt32()
             self.entries = [SFPEntry(f) for _ in range(self.entry_count)]
 
     def unpack(self, out_dir : str): #it doesn't extract the "real" filenames, but I am not really sure how that whole thing work rn
         print(f"Extracting files from {self.filepath}...")
-        os.makedirs(out_dir, exist_ok=True)
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
         types = {}
         for entry in self.entries:
             if entry.file_type not in types:
-                entry.write_file(Path(out_dir) / (self.filename + extensions[entry.file_type]))
+                Path(out_dir, self.filename + extensions[entry.file_type]).write_bytes(entry.data)
                 types[entry.file_type] = 1
             else:
-                entry.write_file(Path(out_dir) / (self.filename + f"{types[entry.file_type]}" + extensions[entry.file_type]))
+                Path(out_dir, self.filename + f"{types[entry.file_type]}" + extensions[entry.file_type]).write_bytes(entry.data)
                 types[entry.file_type] += 1
 
     def import_files(self, in_dir : str):
@@ -51,8 +51,7 @@ class SFP:
 
     def save(self, filepath : str):
         with EndianBinaryFileWriter(filepath) as f:
-            f.write(self.magic1)
-            f.write(self.magic2)
+            f.write(MAGIC)
             f.write_UInt32(self.unk)
             f.write_UInt32(self.entry_count)
             for entry in self.entries:
@@ -79,9 +78,6 @@ class SFPEntry:
         self.data = newdata
         self.data_size = len(self.data)
 
-    def write_file(self, out_filepath : str):
-        open(out_filepath, 'wb').write(self.data)
-
     def write_info(self, f : EndianBinaryFileWriter):
         f.write_UInt32(0)
         f.write_UInt32(self.data_size)
@@ -89,21 +85,18 @@ class SFPEntry:
         f.pad(8)
 
 def batch_export_sfp(input_dir : str, extracted_dir : str):
-    for path, _, files in os.walk(input_dir):
-        for file in files:
-            if file.lower().endswith(".sfp"):
-                abs_path = Path(path) / file
-                sfp = SFP(abs_path)
-                out_dir = Path(extracted_dir) / abs_path.relative_to(input_dir)
-                sfp.unpack(out_dir)
+    for path in Path(input_dir).rglob('*'):
+        if has_correct_suffix(path, '.sfp'):
+            sfp = SFP(path)
+            out_dir = Path(extracted_dir, path.relative_to(input_dir))
+            sfp.unpack(out_dir)
 
 def batch_import_sfp(input_dir : str, extracted_dir : str):
-    for file in os.listdir(input_dir):
-        if file.lower().endswith(".sfp"):
-            abs_path = Path(input_dir) / file
-            sfp = SFP(abs_path)
-            sfp.import_files(Path(extracted_dir) / file)
-            sfp.save(abs_path)
+    for path in Path(input_dir).iterdir():
+        if has_correct_suffix(path, '.sfp'):
+            sfp = SFP(path)
+            sfp.import_files(Path(extracted_dir, path.name))
+            sfp.save(path)
 
 def main():
     args = sys.argv

@@ -1,13 +1,14 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter
+from utils import EndianBinaryFileReader
 from PIL import Image
-from pathlib import Path
 import zlib
 import sys
+
+MAGIC = b'MFNT'
 
 class MFT:
     def __init__(self, filepath : str):
         with EndianBinaryFileReader(filepath) as f:
-            self.magic = f.check_magic(b'MFNT')
+            f.check_magic(MAGIC)
             self.unk1 = f.read_UInt16()
             self.unk2 = f.read_UInt16()
             self.glyph_width = f.read_UInt16()
