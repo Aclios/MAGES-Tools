@@ -1,13 +1,21 @@
-from utils import EndianBinaryFileReader, EndianBinaryFileWriter, EndianBinaryStreamWriter, TextStreamReader, load_font_txt, has_correct_suffix
+from utils import (
+    EndianBinaryFileReader,
+    EndianBinaryFileWriter,
+    EndianBinaryStreamWriter,
+    TextStreamReader,
+    load_font_txt,
+    has_correct_suffix,
+)
 import sys
 import json
 from pathlib import Path
 import pandas as pd
 
-MAGIC = b'MES\x00'
+MAGIC = b"MES\x00"
+
 
 class MSB:
-    def __init__(self, filepath : str, game_code : str):
+    def __init__(self, filepath: str, game_code: str):
         self.load_profile(game_code)
         with EndianBinaryFileReader(filepath) as f:
             self.filename = Path(filepath).name
@@ -15,19 +23,47 @@ class MSB:
             self.unk = f.read_UInt32()
             self.entry_count = f.read_UInt32()
             self.data_start_offset = f.read_UInt32()
-            self.entries = [MSBEntry(f, self.data_start_offset, self.settings, self.font, self.op_codes, self.buttons) for _ in range(self.entry_count)]
+            self.entries = [
+                MSBEntry(
+                    f,
+                    self.data_start_offset,
+                    self.settings,
+                    self.font,
+                    self.op_codes,
+                    self.buttons,
+                )
+                for _ in range(self.entry_count)
+            ]
             self.unk_ids = set()
-            for entry in self.entries: self.unk_ids |= entry.unknown_ids
+            for entry in self.entries:
+                self.unk_ids |= entry.unknown_ids
 
-    def write_excel(self, out_dir : str):
-        out_path = Path(out_dir) / (self.filename + '.xlsx')
-        data = [[entry.type, entry.speaker, entry.speaker, entry.string, entry.string, entry.static_code] for entry in self.entries]
-        columns = ["Type", "Speaker Original", "Speaker Translation", "Original", "Translation", "Static code"]
+    def write_excel(self, out_dir: str):
+        out_path = Path(out_dir) / (self.filename + ".xlsx")
+        data = [
+            [
+                entry.type,
+                entry.speaker,
+                entry.speaker,
+                entry.string,
+                entry.string,
+                entry.static_code,
+            ]
+            for entry in self.entries
+        ]
+        columns = [
+            "Type",
+            "Speaker Original",
+            "Speaker Translation",
+            "Original",
+            "Translation",
+            "Static code",
+        ]
         df = pd.DataFrame(data=data, columns=columns)
         df.to_excel(out_path)
-                   
-    def load_excel(self, excel_file : str):
-        df = pd.read_excel(excel_file, index_col = 0, dtype = str, na_filter = False)
+
+    def load_excel(self, excel_file: str):
+        df = pd.read_excel(excel_file, index_col=0, dtype=str, na_filter=False)
         for idx, data in enumerate(df["Translation"]):
             self.entries[idx].string = str(data)
         for idx, speaker in enumerate(df["Speaker Translation"]):
@@ -35,17 +71,25 @@ class MSB:
         for idx, data in enumerate(df["Static code"]):
             self.entries[idx].static_code = str(data)
 
-    def load_profile(self, game_code : str):
-        profile_path = Path('profiles') / game_code
-        assert profile_path.is_dir() , f"Error: No profile found for this game code: {game_code}"
+    def load_profile(self, game_code: str):
+        profile_path = Path("profiles") / game_code
+        assert (
+            profile_path.is_dir()
+        ), f"Error: No profile found for this game code: {game_code}"
         self.font = load_font_txt(game_code)
-        buttons = json.load(open(profile_path / 'buttons.json', mode = 'r', encoding = 'utf-8'))
-        self.buttons = {int(k) : v for k, v in buttons.items()}
-        op_codes = json.load(open(profile_path / 'op_codes.json', mode = 'r', encoding = 'utf-8'))
-        self.op_codes = {int(k) : v for k, v in op_codes.items()}
-        self.settings = json.load(open(profile_path / 'settings.json', mode = 'r', encoding = 'utf-8'))
+        buttons = json.load(
+            open(profile_path / "buttons.json", mode="r", encoding="utf-8")
+        )
+        self.buttons = {int(k): v for k, v in buttons.items()}
+        op_codes = json.load(
+            open(profile_path / "op_codes.json", mode="r", encoding="utf-8")
+        )
+        self.op_codes = {int(k): v for k, v in op_codes.items()}
+        self.settings = json.load(
+            open(profile_path / "settings.json", mode="r", encoding="utf-8")
+        )
 
-    def save(self, out_filepath : str):
+    def save(self, out_filepath: str):
         with EndianBinaryFileWriter(out_filepath) as f:
             f.write(MAGIC)
             f.write_UInt32(self.unk)
@@ -65,23 +109,37 @@ class MSB:
     def get_speakers(self):
         speakers = set()
         for entry in self.entries:
-            if entry.speaker != '':
+            if entry.speaker != "":
                 speakers.add(entry.speaker)
         return speakers
 
-    def set_speakers(self, speakers : dict):
+    def set_speakers(self, speakers: dict):
         for entry in self.entries:
             if entry.speaker in speakers:
                 entry.speaker = speakers[entry.speaker]
 
-class MSBEntry:
-    type : str = "static"
-    is_invalid : bool = False
 
-    def __init__(self, f : EndianBinaryFileReader, data_start_offset : int, settings : dict, font : str, op_codes : dict, buttons : dict):
-        self.settings, self.font, self.op_codes, self.buttons = settings, font, op_codes, buttons
+class MSBEntry:
+    type: str = "static"
+    is_invalid: bool = False
+
+    def __init__(
+        self,
+        f: EndianBinaryFileReader,
+        data_start_offset: int,
+        settings: dict,
+        font: str,
+        op_codes: dict,
+        buttons: dict,
+    ):
+        self.settings, self.font, self.op_codes, self.buttons = (
+            settings,
+            font,
+            op_codes,
+            buttons,
+        )
         self.data_start_offset = data_start_offset
-        self.unk = f.read_UInt32() # ?
+        self.unk = f.read_UInt32()  # ?
         self.data_offset = f.read_UInt32()
         self.string = ""
         self.speaker = ""
@@ -89,68 +147,74 @@ class MSBEntry:
         self.unknown_ids = set()
 
         if self.data_offset != 0xFF_FF_FF_FF:
-            f.set_endianness('big')
+            f.set_endianness("big")
             pos = f.tell()
             f.seek(self.data_start_offset + self.data_offset)
             self.read_data(f)
             f.seek(pos)
-            f.set_endianness('little')
+            f.set_endianness("little")
 
         else:
             self.is_invalid = True
-    
-    def read_data(self, f : EndianBinaryFileReader):
+
+    def read_data(self, f: EndianBinaryFileReader):
         val = f.read_UInt8()
         while True:
             match val:
-                case 0x01: #speaker name if it's a dialogue entry
+                case 0x01:  # speaker name if it's a dialogue entry
                     self.type = "dialogue"
                     self.speaker, val = self.decode_string(f)
 
-                case 0x02: #text if it's a dialogue entry
-                    if self.string != "": #very rarely, there is a code before the speaker
+                case 0x02:  # text if it's a dialogue entry
+                    if (
+                        self.string != ""
+                    ):  # very rarely, there is a code before the speaker
                         self.static_code = self.string
                     self.string, val = self.decode_string(f)
 
-                case 0xff: #end of section
+                case 0xFF:  # end of section
                     break
 
-                case _: #entry with text only (UI text)
+                case _:  # entry with text only (UI text)
                     f.seek(-1, 1)
                     self.string, val = self.decode_string(f)
 
-    def decode_string(self, f : EndianBinaryFileReader) -> str:
+    def decode_string(self, f: EndianBinaryFileReader) -> str:
         color_flag = False
         out_string = ""
         val = f.read_UInt8()
         while True:
 
-            if val in [1, 2, 0xff]:
+            if val in [1, 2, 0xFF]:
                 break
 
             elif val >= 0x80:
                 f.seek(-1, 1)
                 if self.settings["bytes_per_char"] == 2:
-                    idx = f.read_UInt16() - 0x8000 #16 bits per char
+                    idx = f.read_UInt16() - 0x8000  # 16 bits per char
                 elif self.settings["bytes_per_char"] == 4:
-                    idx = f.read_UInt32() - 0x80_00_00_00 #32 bits per chat
+                    idx = f.read_UInt32() - 0x80_00_00_00  # 32 bits per chat
 
                 if self.font[idx] == chr(0x3000) and idx in self.buttons:
                     out_string += f"<{self.buttons[idx]}>"
                 else:
-                    assert idx < len(self.font), f"Char number {idx} is beyond font table length"
+                    assert idx < len(
+                        self.font
+                    ), f"Char number {idx} is beyond font table length"
                     char = self.font[idx]
                     out_string += char
-                    if char == ' ' and idx != 63:
+                    if char == " " and idx != 63:
                         self.unknown_ids.add(idx)
 
             elif val == 0:
-                out_string += '\n'
+                out_string += "\n"
 
             elif val in self.op_codes:
                 name, arg_count = self.op_codes[val]
 
-                if val == 4 and self.settings["asymetrical_color_code"]: #in Famicom Detective Club, text color op codes have 4 arguments then 3 (annoying)
+                if (
+                    val == 4 and self.settings["asymetrical_color_code"]
+                ):  # in Famicom Detective Club, text color op codes have 4 arguments then 3 (annoying)
                     if color_flag:
                         color_flag = False
                     else:
@@ -164,22 +228,24 @@ class MSBEntry:
                     out_string += f"<{name}:{','.join(args)}>"
 
             else:
-                raise Exception(f"Unknown code value {val} at offset {hex(f.tell() - 1)}")
-            
+                raise Exception(
+                    f"Unknown code value {val} at offset {hex(f.tell() - 1)}"
+                )
+
             val = f.read_UInt8()
         return out_string, val
-    
-    def encode_string(self, string : str) -> bytes:
-        reverse_op_codes = {v[0] : k for k, v in self.op_codes.items()}
-        reverse_buttons = {v : k for k, v in self.buttons.items()}
-        out_stream = EndianBinaryStreamWriter(endianness = 'big')
+
+    def encode_string(self, string: str) -> bytes:
+        reverse_op_codes = {v[0]: k for k, v in self.op_codes.items()}
+        reverse_buttons = {v: k for k, v in self.buttons.items()}
+        out_stream = EndianBinaryStreamWriter(endianness="big")
         stream = TextStreamReader(string)
         char = stream.read(1)
 
         while char != "":
             if char == "<":
-                code = stream.readUntilOccurrence('>')
-                name = code.split(':')[0]
+                code = stream.readUntilOccurrence(">")
+                name = code.split(":")[0]
 
                 if name in reverse_op_codes:
                     out_stream.write_UInt8(reverse_op_codes[name])
@@ -190,18 +256,20 @@ class MSBEntry:
                         out_stream.write_UInt32(0x80_00_00_00 + reverse_buttons[name])
                 else:
                     raise Exception(f"Unknown tag {code}")
-                
-                if ':' in code:
-                    args = code.split(':')[1].split(',')
+
+                if ":" in code:
+                    args = code.split(":")[1].split(",")
                     for arg in args:
                         out_stream.write_UInt8(int(arg))
             else:
-                if char == '\n':
+                if char == "\n":
                     out_stream.write_UInt8(0)
-                elif char == '\r':
+                elif char == "\r":
                     pass
                 elif char not in self.font:
-                    print(f"WARNING: The character {char} isn't in the font.txt file, it must be added. It has been ignored.")
+                    print(
+                        f"WARNING: The character {char} isn't in the font.txt file, it must be added. It has been ignored."
+                    )
                 else:
                     val = self.font.index(char)
                     if self.settings["bytes_per_char"] == 2:
@@ -216,7 +284,7 @@ class MSBEntry:
 
         if self.is_invalid:
             return bytes()
-        
+
         stream = EndianBinaryStreamWriter()
         stream.write(self.encode_string(self.static_code))
 
@@ -225,32 +293,35 @@ class MSBEntry:
             stream.write(self.encode_string(self.speaker))
             stream.write_UInt8(2)
             stream.write(self.encode_string(self.string))
-        
+
         else:
             stream.write(self.encode_string(self.string))
 
-        stream.write_UInt8(0xff)
+        stream.write_UInt8(0xFF)
 
         return stream.getvalue()
 
-def write_speakers(filepath : str, speakers : list):
+
+def write_speakers(filepath: str, speakers: list):
     data = [[speakers[idx], speakers[idx]] for idx in range(len(speakers))]
-    df = pd.DataFrame(data = data, columns = ["Original", "Translation"])
+    df = pd.DataFrame(data=data, columns=["Original", "Translation"])
     df.to_excel(filepath)
 
-def load_speakers(filepath : str):
+
+def load_speakers(filepath: str):
     speakers = {}
     df = pd.read_excel(filepath)
     for idx in range(len(df["Original"])):
         speakers[df["Original"][idx]] = df["Translation"][idx]
     return speakers
 
-def convert_speakers(xlsx_dir : str, speakers_path : str):
+
+def convert_speakers(xlsx_dir: str, speakers_path: str):
     print("Converting speakers...")
     speaker_trad_map = load_speakers(speakers_path)
     for path in Path(xlsx_dir).iterdir():
-        if has_correct_suffix(path, '.xlsx'):
-            df = pd.read_excel(path, index_col = 0, dtype = str, na_filter = False)
+        if has_correct_suffix(path, ".xlsx"):
+            df = pd.read_excel(path, index_col=0, dtype=str, na_filter=False)
             if "Speaker Original" in df.columns:
                 for idx, speaker in enumerate(df["Speaker Original"]):
                     if speaker in speaker_trad_map:
@@ -258,43 +329,47 @@ def convert_speakers(xlsx_dir : str, speakers_path : str):
                 df.to_excel(path)
     print("Done!")
 
-def batch_export(game_code : str, input_dir : str, extraction_dir : str):
+
+def batch_export(game_code: str, input_dir: str, extraction_dir: str):
     speakers = set()
-    #unk_ids = set()
+    # unk_ids = set()
     Path(extraction_dir).mkdir(exist_ok=True, parents=True)
     for path in Path(input_dir).iterdir():
-        if has_correct_suffix(path, '.msb'):
+        if has_correct_suffix(path, ".msb"):
             print(f"Exporting {path}...")
             msb = MSB(path, game_code)
-            speakers |= msb.get_speakers()           
+            speakers |= msb.get_speakers()
             msb.write_excel(extraction_dir)
-            #unk_ids |= msb.unk_ids
+            # unk_ids |= msb.unk_ids
 
     print("Writing speakers file...")
     write_speakers(Path(extraction_dir) / "speakers.xlsx", list(speakers))
-  #  with open('unk.txt', mode='w') as f:
-   #     for id in unk_ids: f.write(str(id) + '\n')
+    #  with open('unk.txt', mode='w') as f:
+    #     for id in unk_ids: f.write(str(id) + '\n')
     print("Done!")
 
-def batch_import(game_code : str, input_dir : str, extraction_dir : str):
+
+def batch_import(game_code: str, input_dir: str, extraction_dir: str):
     for path in Path(input_dir).iterdir():
-        if has_correct_suffix(path, '.msb'):
+        if has_correct_suffix(path, ".msb"):
             msb = MSB(path, game_code)
             print(f"Importing text to {path}...")
-            msb.load_excel(Path(extraction_dir, path.name + 'xlsx'))
+            msb.load_excel(Path(extraction_dir, path.name + "xlsx"))
             msb.save(path)
     print("Done!")
 
+
 def main():
     args = sys.argv
-    if args[1] == '-e':
+    if args[1] == "-e":
         batch_export(args[2], args[3], args[4])
-    elif args[1] == '-i':
+    elif args[1] == "-i":
         batch_import(args[2], args[3], args[4])
-    elif args[1] == '-s':
+    elif args[1] == "-s":
         convert_speakers(args[2], args[3])
     else:
         return
-    
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     main()

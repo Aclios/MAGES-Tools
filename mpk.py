@@ -3,10 +3,11 @@ from pathlib import Path
 import zlib
 import sys
 
-MAGIC = b'MPK\x00'
+MAGIC = b"MPK\x00"
+
 
 class MPK:
-    def __init__(self, filepath : str):
+    def __init__(self, filepath: str):
         with EndianBinaryFileReader(filepath) as f:
             self.filepath = filepath
             f.check_magic(MAGIC)
@@ -16,15 +17,15 @@ class MPK:
             self.padding = f.read(0x30)
             self.entries = [MPKEntry(f) for _ in range(self.entry_count)]
 
-    def unpack(self, extract_dir : str):
+    def unpack(self, extract_dir: str):
         for entry in self.entries:
-            if entry.filepath != '':
+            if entry.filepath != "":
                 print(f"Extracting {entry.filepath} from {self.filepath}...")
                 extract_path = Path(extract_dir) / entry.filepath
                 extract_path.parent.mkdir(exist_ok=True, parents=True)
                 entry.write_file(extract_path)
 
-    def import_files(self, dir : str):
+    def import_files(self, dir: str):
         for entry in self.entries:
             lookup_path = Path(dir) / entry.filepath
             if lookup_path.exists():
@@ -32,7 +33,7 @@ class MPK:
                 newdata = lookup_path.read_bytes()
                 entry.import_data(newdata)
 
-    def save(self, filepath : str):
+    def save(self, filepath: str):
         with EndianBinaryFileWriter(filepath) as f:
             f.write(MAGIC)
             f.write_UInt16(self.unk1)
@@ -49,23 +50,24 @@ class MPK:
                 f.write_UInt64(offset)
                 f.seek(0, 2)
 
+
 class MPKEntry:
-    def __init__(self, f : EndianBinaryFileReader):
+    def __init__(self, f: EndianBinaryFileReader):
         self.compress_flag = f.read_UInt32()
         self.idx = f.read_UInt32()
         self.data_offset = f.read_UInt64()
         self.compressed_data_size = f.read_UInt64()
         self.uncompressed_data_size = f.read_UInt64()
-        self.filepath = f.read(0xE0).decode().strip('\x00')
+        self.filepath = f.read(0xE0).decode().strip("\x00")
         self.read_data(f)
 
-    def read_data(self, f : EndianBinaryFileReader):
+    def read_data(self, f: EndianBinaryFileReader):
         pos = f.tell()
         f.seek(self.data_offset)
         self.data = f.read(self.compressed_data_size)
         f.seek(pos)
 
-    def import_data(self, newdata : bytes):
+    def import_data(self, newdata: bytes):
         self.uncompressed_data_size = len(newdata)
         match self.compress_flag:
             case 0:
@@ -73,41 +75,46 @@ class MPKEntry:
             case 1:
                 self.data = zlib.compress(newdata)
             case _:
-                raise Exception(f"Unsupported compression with id {self.compress_flag}") 
+                raise Exception(f"Unsupported compression with id {self.compress_flag}")
         self.compressed_data_size = len(self.data)
 
-    def write_file(self, extract_path : str):
+    def write_file(self, extract_path: str):
         match self.compress_flag:
             case 0:
                 out_data = self.data
             case 1:
                 out_data = zlib.decompress(self.data)
             case _:
-                raise Exception(f"Unsupported compression with id {self.compress_flag}")         
-        assert len(out_data) == self.uncompressed_data_size, "Error: the actual length of the data don't match the expected size"
+                raise Exception(f"Unsupported compression with id {self.compress_flag}")
+        assert (
+            len(out_data) == self.uncompressed_data_size
+        ), "Error: the actual length of the data don't match the expected size"
         Path(extract_path).write_bytes(out_data)
 
-    def write_info(self, f : EndianBinaryFileWriter):
+    def write_info(self, f: EndianBinaryFileWriter):
         f.write_UInt32(self.compress_flag)
         f.write_UInt32(self.idx)
         f.write_UInt64(0)
         f.write_UInt64(self.compressed_data_size)
         f.write_UInt64(self.uncompressed_data_size)
-        f.write(self.filepath.encode('utf-8'))
+        f.write(self.filepath.encode("utf-8"))
         f.write((0xE0 - len(self.filepath)) * b"\x00")
 
-def batch_export_mpk(input_dir : str, extracted_dir : str):
+
+def batch_export_mpk(input_dir: str, extracted_dir: str):
     for path in Path(input_dir).iterdir():
-        if has_correct_suffix(path, '.mpk'):
+        if has_correct_suffix(path, ".mpk"):
             mpk = MPK(path)
             mpk.unpack(Path(extracted_dir, path.name))
 
-def batch_import_mpk(input_dir : str, extracted_dir : str):
+
+def batch_import_mpk(input_dir: str, extracted_dir: str):
     for path in Path(input_dir).iterdir():
-        if has_correct_suffix(path, '.mpk'):
+        if has_correct_suffix(path, ".mpk"):
             mpk = MPK(path)
             mpk.import_files(Path(extracted_dir, path.name))
             mpk.save(path)
+
 
 def main():
     args = sys.argv
@@ -116,5 +123,6 @@ def main():
     elif args[1] == "-i":
         batch_import_mpk(args[2], args[3])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
