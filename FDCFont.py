@@ -7,22 +7,31 @@ from utils import (
 import json
 import sys
 
-FONT_DATA_OFFSET = 0x1B0E8D
-GLYPH_COUNT = 0x400
+
+def get_preset(game_code: str) -> tuple[int, int]:
+    if game_code == "FDC3":
+        raise Exception("FDC3 isn't supported.")
+    if game_code not in ["FDC1", "FDC2"]:
+        raise Exception("This game code doesn't belong to a Famicom Detective game.")
+    if game_code == "FDC1":
+        return 0x1B0E8D, 0x400
+    if game_code == "FDC2":
+        return 0x1AD53D, 0x400
 
 
 def export_font_metrics(game_code: str, main_path: str, json_path: str):
     font = load_font_txt(game_code)
+    fontDataOffset, glyphCount = get_preset(game_code)
 
     with EndianBinaryFileReader(main_path) as f:
-        f.seek(FONT_DATA_OFFSET)
-        width = [f.read_Int8() for _ in range(GLYPH_COUNT)]
-        height = [f.read_Int8() for _ in range(GLYPH_COUNT)]
-        unk2 = [f.read_Int8() for _ in range(GLYPH_COUNT)]
-        x_off = [f.read_Int8() for _ in range(GLYPH_COUNT)]
-        y_off = [f.read_Int8() for _ in range(GLYPH_COUNT)]
+        f.seek(fontDataOffset)
+        width = [f.read_Int8() for _ in range(glyphCount)]
+        height = [f.read_Int8() for _ in range(glyphCount)]
+        unk2 = [f.read_Int8() for _ in range(glyphCount)]
+        x_off = [f.read_Int8() for _ in range(glyphCount)]
+        y_off = [f.read_Int8() for _ in range(glyphCount)]
 
-    chars = [font[i] for i in range(GLYPH_COUNT)]
+    chars = [font[i] for i in range(glyphCount)]
 
     json_data = [
         {
@@ -33,7 +42,7 @@ def export_font_metrics(game_code: str, main_path: str, json_path: str):
             "x_off": x_off[i],
             "y_off": y_off[i],
         }
-        for i in range(GLYPH_COUNT)
+        for i in range(glyphCount)
     ]
 
     json.dump(
@@ -46,8 +55,11 @@ def export_font_metrics(game_code: str, main_path: str, json_path: str):
 
 def import_font_metrics(game_code: str, json_path: str, main_path: str):
     json_data = json.load(open(json_path, mode="r", encoding="utf-8"))
+    fontDataOffset, glyphCount = get_preset(game_code)
+    if len(json_data) != glyphCount:
+        raise Exception("Adding/removing glyphs isn't supported.")
     with EndianBinaryFileUpdater(main_path) as f:
-        f.seek(FONT_DATA_OFFSET)
+        f.seek(fontDataOffset)
         for glyph in json_data:
             f.write_Int8(glyph["width"])
         for glyph in json_data:
